@@ -1,0 +1,43 @@
+COMPILER Aritmetica    
+
+CHARACTERS 
+
+letter = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz". 
+digit = "0123456789" .
+tab = CHR(9).
+eol = CHR(10).
+
+TOKENS
+
+ident = letter{letter|digit} EXCEPT KEYWORDS.
+number = digit{digit}.
+
+PRODUCTIONS
+
+Expr= {Stat ";"}".".
+
+Stat = 							(.IntegerRef value=new IntegerRef();.)
+	Expression<  value>		(.System.out.println(value.getValue());.)
+	.
+
+Expression< IntegerRef result> =		(.IntegerRef result1=new IntegerRef();IntegerRef result2=new IntegerRef();.)
+	Term<  result1>
+	{    "+"Term<  result2>		(.result1.add(result2.getValue());.)
+	   | "-"Term<  result2>		(.result1.substract(result2.getValue());.)
+	}							(.result.setValue(result1.getValue());.)
+	.
+
+Term< IntegerRef result>=				(.IntegerRef result1=new IntegerRef();IntegerRef result2=new IntegerRef();.)
+	Factor< result1>
+	{    "*"Factor< result2>	(.result1.multiply(result2.getValue());.)
+	   | "/"Factor< result2>	(.result1.divide(result2.getValue());.)
+	}							(.result.setValue(result1.getValue());.)
+	.
+	
+Factor< IntegerRef result> =	(.int signo=1;.)
+	["-"(.signo = -1;.)]
+	( Number< result> | "("Expression<  result>")") (.result.multiply(signo);.).
+	
+Number< IntegerRef result> =  number (. result.setValue(Integer.parseInt(lastToken.getValue()));.).
+
+END Aritmetica

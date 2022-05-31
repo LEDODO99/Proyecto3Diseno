@@ -1,0 +1,51 @@
+COMPILER Double    
+
+CHARACTERS 
+
+digit = "0123456789".
+tab = CHR(9).
+eol = CHR(10).
+blanco = eol+CHR(13)+tab.
+
+TOKENS
+
+number = digit{digit}.
+decnumber = digit{digit}"."digit{digit}.
+white = blanco{blanco}.
+
+PRODUCTIONS
+
+Expr= {Stat ";"{white}}{white}".".
+
+Stat = 							(.	DoubleRef value = new DoubleRef();.)
+	Expression<value>		(.System.out.println(value.getValue());.)
+	.
+
+Expression<DoubleRef result> =			(.DoubleRef result1=new DoubleRef();DoubleRef result2=new DoubleRef();.)
+	Term<result1>
+	{    "+"Term<result2>		(.result1.add(result2.getValue());.)
+	   | "-"Term<result2>		(.result1.substract(result2.getValue());.)
+	}								(.result.setValue(result1.getValue());.)
+	.
+
+Term< DoubleRef result>=				(.DoubleRef result1=new DoubleRef();DoubleRef result2=new DoubleRef();.)
+	Factor<result1>
+	{    "*"Factor<result2>	(.result1.multiply(result2.getValue());.)
+	   | "/"Factor<result2>	(.result1.divide(result2.getValue());.)
+	}							(.result.setValue(result1.getValue());.)
+	.
+
+
+Factor<DoubleRef result> =		(.double sign=1;.)
+	["-"						(.sign = -1;.)
+	]
+	(Number< result>
+	 |"("Expression< result>")"
+	)							(.result.multiply(sign);.)
+	.
+
+Number<DoubleRef result> =	
+	(number				
+	|decnumber)(. result.setValue(Double.parseDouble(lastToken.getValue()));.)
+	.
+END Double
