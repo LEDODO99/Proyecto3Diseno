@@ -193,14 +193,15 @@ public class Lector{
                 return;
             }
             if (stage==1){
-                nombresDeCharacters.add(line.split(" ")[0]);
-                characterReader(line.split(" ",3)[2]);
+                characterReader1(line);
+                /*nombresDeCharacters.add(line.split(" ")[0]);
+                characterReader(line.split(" ",3)[2]);*/
             }else if (stage==2){
 
                 keywordReader(line);
                 
             }else if (stage==3){
-                tokenReader(line);       
+                tokenReader1(line);       
             }else if (stage==4){
                 for (int i=0; i<line.length(); i++){
                     productionsReader(line.charAt(i));
@@ -208,7 +209,9 @@ public class Lector{
                 }
             }
     }
+    private void constructAny(){
 
+    }
     private void productionEnd(){
         parserCreationStrings.add(temporaryStringForFunc);
         for (int i = listaDeFirstPosDeFuncionesString.size()-1;i>=0;i--){
@@ -306,7 +309,7 @@ public class Lector{
                 if (character=='<'){
                     betweenArrows=true;
                     isFindingIdent=false;
-                }else if(character=='('||character==')'||character=='{'||character=='}'||character=='['||character==']'||character=='\"'||character=='|'||character=='('){
+                }else if(character=='.'||character=='('||character==')'||character=='{'||character=='}'||character=='['||character==']'||character=='\"'||character=='|'||character=='('){
                     if(tokenNames.contains(nameBeingFound)){
                         temporaryStringForFunc=temporaryStringForFunc+"Expect("+tokenNames.indexOf(nameBeingFound)+");\n";
                     }else{
@@ -476,6 +479,144 @@ public class Lector{
         }
     }
 
+    private void tokenReader1(String string){
+        boolean isBeforeEqualSig=true;
+        String tokenName="";
+        isFindingCharacter=false;
+        orDepth = new ArrayList<>();
+        orDepth.add(false);
+        noDeterminista.addNode(0, EPSILON);
+        lastNodes = new ArrayList<>();
+        firstNodes = new ArrayList<>();
+        firstNodes.add(noDeterminista.getCantidadNodos()-1);
+        lastNodes.add(noDeterminista.getCantidadNodos()-1);
+        if(string.contains("IGNORE SET ")){
+            String setToIgnore=string.substring(11);
+            setToIgnore.replaceAll(" ", "");
+            String cadenaDeCharacter;
+            cadenaDeCharacter = subconjuntosDeSimbolosCharacters.get(nombresDeCharacters.indexOf(setToIgnore));
+            noDeterminista.addNode(0, cadenaDeCharacter);
+            noDeterminista.addTransicion(noDeterminista.getCantidadNodos()-1, 0, EPSILON);
+            noDeterminista.addTransicion(0, noDeterminista.getCantidadNodos()-1, EPSILON);
+            lastNodes.set(lastNodes.size()-1, noDeterminista.getCantidadNodos()-1);
+            return;
+        }
+        for (int i=0; i<string.length();i++){
+            if(isBeforeEqualSig){
+                if(string.charAt(i)=='='){
+                    isBeforeEqualSig=false;
+                }else if(string.charAt(i)==' '){
+
+                }else{
+                    tokenName+=string.charAt(i);
+                }
+            }else{
+                char characterActual=string.charAt(i);
+                if (characterActual==' '){
+                    if(isFindingCharacter){
+                        if(characterFound.equals("EXCEPT")){
+                            break;
+                        }
+                        characterFound();
+                        isFindingCharacter=false;
+                    }else if (isInComillas){
+                        addSymbolToLanguage(characterActual);
+                        thomsonChar(characterActual);
+                    }
+                }else if (characterActual=='('||characterActual=='{'||characterActual=='['){
+                    if(isFindingCharacter){
+                        characterFound();
+                        isFindingCharacter=false;
+                    }
+                    if (isInComillas){
+                        addSymbolToLanguage(characterActual);
+                        thomsonChar(characterActual);
+                    }else{
+                        thomsonOpenPar();
+                    }
+                }else if(characterActual=='\"'){
+                    if(isFindingCharacter){
+                        characterFound();
+                        isFindingCharacter=false;
+                    }
+                    if (isInComillas){
+                        isInComillas=false;
+                        thomsonClosePar();
+                    }else{
+                        isInComillas=true;
+                        thomsonOpenPar();
+                    }
+                }else if(characterActual=='}'){
+                    if(isFindingCharacter){
+                        characterFound();
+                        isFindingCharacter=false;
+                    }
+                    if (isInComillas){
+                        addSymbolToLanguage(characterActual);
+                        thomsonChar(characterActual);
+                    }else{
+                        thomsonClosePar();
+                        thomsonStar();
+                    }
+                }else if(characterActual==']'){
+                    if(isFindingCharacter){
+                        characterFound();
+                        isFindingCharacter=false;
+                    }
+                    if (isInComillas){
+                        addSymbolToLanguage(characterActual);
+                        thomsonChar(characterActual);
+                    }else{
+                        thomsonClosePar();
+                        thomsonQuestion();
+                    }
+                }else if(characterActual==')'){
+                    if(isFindingCharacter){
+                        characterFound();
+                        isFindingCharacter=false;
+                    }
+                    if (isInComillas){
+                        addSymbolToLanguage(characterActual);
+                        thomsonChar(characterActual);
+                    }else{
+                        thomsonClosePar();
+                    }
+                }else if (characterActual=='|'){
+                    if(isFindingCharacter){
+                        characterFound();
+                        isFindingCharacter=false;
+                    }
+                    if (isInComillas){
+                        addSymbolToLanguage(characterActual);
+                        thomsonChar(characterActual);
+                    }else{
+                        thomsonOr();
+                    }
+                }else{
+                    if (isInComillas){
+                        addSymbolToLanguage(characterActual);
+                        thomsonChar(characterActual);
+                    }else{
+                        if(!isFindingCharacter){
+                            characterFound="";
+                        }
+                        isFindingCharacter = true;
+                        characterFound+=characterActual;
+                    }
+                }
+            }
+        }
+        if(orDepth.get(0)){
+            noDeterminista.addTransicion(lastNodes.get(lastNodes.size()-1), firstNodes.get(firstNodes.size()), EPSILON);
+            lastNodes.remove(lastNodes.size()-1);
+        }
+        noDeterminista.getNodo(lastNodes.get(lastNodes.size()-1)).setIsFinal(true);
+        noDeterminista.getNodo(lastNodes.get(lastNodes.size()-1)).setTokenType(1);
+        noDeterminista.getNodo(lastNodes.get(lastNodes.size()-1)).setToken(tokenName);
+        noDeterminista.getNodo(lastNodes.get(lastNodes.size()-1)).setTokenNumber(tokenNames.size());
+        tokenNames.add(tokenName);
+        
+    }
     private void tokenReader(String string){
         isFindingCharacter=false;
         orDepth = new ArrayList<>();
@@ -601,6 +742,398 @@ public class Lector{
         noDeterminista.getNodo(noDeterminista.getCantidadNodos()-1).setTokenNumber(tokenNames.size());
         keywordNames.add(strings[0]);
         tokenNames.add(strings[0]);
+    }
+
+    private void characterReader1(String string){
+        String stringDeCharacter="";
+        String nombreDeCharacter="";
+        String stringIdents="";
+        String stringQuotations="";
+        String stringCharNumber="";
+        boolean beforeTheEqual=true;
+        boolean findingIdent=false;
+        boolean findingQuotations=false;
+        boolean findingCharNumber=false;
+        boolean adding = true;
+        boolean justPassedChar=false;
+        boolean justPassedDotChar=false;
+        int numberGatheredFromFirstChar=-1;
+
+        for (int i=0; i<string.length();i++){
+            if (beforeTheEqual){
+                if(string.charAt(i)==' '){
+
+                }else if (string.charAt(i)=='='){
+                    nombresDeCharacters.add(nombreDeCharacter);
+                    nombreDeCharacter="";
+                    beforeTheEqual=false;
+                    findingIdent=false;
+                    findingQuotations=false;
+                    findingCharNumber=false;
+                    adding=true;
+                    justPassedChar=false;
+                    justPassedDotChar=false;
+                    numberGatheredFromFirstChar=-1;
+                    stringDeCharacter="";
+                }else{
+                    nombreDeCharacter+=string.charAt(i);
+                }
+            }else{
+                if(findingIdent){
+                    if(string.charAt(i)=='-'){
+                        String stringQueSeUne="";
+                        if(stringIdents.equals("ANY")){
+                            for (int j=0;j<subconjuntosDeSimbolosCharacters.size();j++){
+                                String cadenaAgregando=subconjuntosDeSimbolosCharacters.get(j);
+                                for (int k=0;k<cadenaAgregando.length();k++){
+                                    if(!stringQueSeUne.contains(Character.toString(cadenaAgregando.charAt(k)))){
+                                        stringQueSeUne+=cadenaAgregando.charAt(k);
+                                    }
+                                }
+                            }
+                        }else{
+                            stringQueSeUne=subconjuntosDeSimbolosCharacters.get(nombresDeCharacters.indexOf(stringIdents));
+                        }
+                        if(adding){
+                            for (int j=0; j<stringQueSeUne.length(); j++){
+                                if(!stringDeCharacter.contains(Character.toString(stringQueSeUne.charAt(j)))){
+                                    stringDeCharacter+=stringQueSeUne.charAt(j);
+                                }
+                            }
+                        }else{
+                            for (int j=0; j<stringQueSeUne.length(); j++){
+                                if(stringDeCharacter.contains(Character.toString(stringQueSeUne.charAt(j)))){
+                                    stringDeCharacter.replaceAll(Character.toString(stringQueSeUne.charAt(j)), "");
+                                }
+                            }
+                        }
+                        stringIdents="";
+                        findingIdent=false;
+                        adding=false;
+                    }else if(string.charAt(i)=='+'){
+                        String stringQueSeUne="";
+                        if(stringIdents.equals("ANY")){
+                            for (int j=0;j<subconjuntosDeSimbolosCharacters.size();j++){
+                                String cadenaAgregando=subconjuntosDeSimbolosCharacters.get(j);
+                                for (int k=0;k<cadenaAgregando.length();k++){
+                                    if(!stringQueSeUne.contains(Character.toString(cadenaAgregando.charAt(k)))){
+                                        stringQueSeUne+=cadenaAgregando.charAt(k);
+                                    }
+                                }
+                            }
+                        }else{
+                            stringQueSeUne=subconjuntosDeSimbolosCharacters.get(nombresDeCharacters.indexOf(stringIdents));
+                        }
+                        if(adding){
+                            for (int j=0; j<stringQueSeUne.length(); j++){
+                                if(!stringDeCharacter.contains(Character.toString(stringQueSeUne.charAt(j)))){
+                                    stringDeCharacter+=stringQueSeUne.charAt(j);
+                                }
+                            }
+                        }else{
+                            for (int j=0; j<stringQueSeUne.length(); j++){
+                                if(stringDeCharacter.contains(Character.toString(stringQueSeUne.charAt(j)))){
+                                    stringDeCharacter.replaceAll(Character.toString(stringQueSeUne.charAt(j)), "");
+                                }
+                            }
+                        }
+                        stringIdents="";
+                        findingIdent=false;
+                        adding=true;
+                    }else if(string.charAt(i)=='('){
+                        if(stringIdents.equals("CHR")){
+                            findingIdent=false;
+                            stringIdents="";
+                            stringCharNumber="";
+                            findingCharNumber=true;
+                        }
+                    }else if(string.charAt(i)=='.'){
+                        String stringQueSeUne="";
+                        if(stringIdents.equals("ANY")){
+                            for (int j=0;j<subconjuntosDeSimbolosCharacters.size();j++){
+                                String cadenaAgregando=subconjuntosDeSimbolosCharacters.get(j);
+                                for (int k=0;k<cadenaAgregando.length();k++){
+                                    if(!stringQueSeUne.contains(Character.toString(cadenaAgregando.charAt(k)))){
+                                        stringQueSeUne+=cadenaAgregando.charAt(k);
+                                    }
+                                }
+                            }
+                        }else{
+                            stringQueSeUne=subconjuntosDeSimbolosCharacters.get(nombresDeCharacters.indexOf(stringIdents));
+                        }
+                        if(adding){
+                            for (int j=0; j<stringQueSeUne.length(); j++){
+                                if(!stringDeCharacter.contains(Character.toString(stringQueSeUne.charAt(j)))){
+                                    stringDeCharacter+=stringQueSeUne.charAt(j);
+                                }
+                            }
+                        }else{
+                            for (int j=0; j<stringQueSeUne.length(); j++){
+                                if(stringDeCharacter.contains(Character.toString(stringQueSeUne.charAt(j)))){
+                                    stringDeCharacter.replace(Character.toString(stringQueSeUne.charAt(j)), "");
+                                }
+                            }
+                        }
+                        stringIdents="";
+                        findingIdent=false;
+                        subconjuntosDeSimbolosCharacters.add(stringDeCharacter);
+                        symbols.add(stringDeCharacter);
+                        nombreDeCharacter="";
+                        beforeTheEqual=false;
+                        findingIdent=false;
+                        findingQuotations=false;
+                        findingCharNumber=false;
+                        adding=true;
+                        justPassedChar=false;
+                        justPassedDotChar=false;
+                        numberGatheredFromFirstChar=-1;
+                        stringDeCharacter="";
+                        break;
+                    }else if(string.charAt(i)==' '){
+                        String stringQueSeUne="";
+                        if(stringIdents.equals("ANY")){
+                            for (int j=0;j<subconjuntosDeSimbolosCharacters.size();j++){
+                                String cadenaAgregando=subconjuntosDeSimbolosCharacters.get(j);
+                                for (int k=0;k<cadenaAgregando.length();k++){
+                                    if(!stringQueSeUne.contains(Character.toString(cadenaAgregando.charAt(k)))){
+                                        stringQueSeUne+=cadenaAgregando.charAt(k);
+                                    }
+                                }
+                            }
+                        }else{
+                            stringQueSeUne=subconjuntosDeSimbolosCharacters.get(nombresDeCharacters.indexOf(stringIdents));
+                        }
+                        if(adding){
+                            for (int j=0; j<stringQueSeUne.length(); j++){
+                                if(!stringDeCharacter.contains(Character.toString(stringQueSeUne.charAt(j)))){
+                                    stringDeCharacter+=stringQueSeUne.charAt(j);
+                                }
+                            }
+                        }else{
+                            for (int j=0; j<stringQueSeUne.length(); j++){
+                                if(stringDeCharacter.contains(Character.toString(stringQueSeUne.charAt(j)))){
+                                    stringDeCharacter.replaceAll(Character.toString(stringQueSeUne.charAt(j)), "");
+                                }
+                            }
+                        }
+                        stringIdents="";
+                        findingIdent=false;
+                    }else if(string.charAt(i)=='\"'){
+                        String stringQueSeUne="";
+                        if(stringIdents.equals("ANY")){
+                            for (int j=0;j<subconjuntosDeSimbolosCharacters.size();j++){
+                                String cadenaAgregando=subconjuntosDeSimbolosCharacters.get(j);
+                                for (int k=0;k<cadenaAgregando.length();k++){
+                                    if(!stringQueSeUne.contains(Character.toString(cadenaAgregando.charAt(k)))){
+                                        stringQueSeUne+=cadenaAgregando.charAt(k);
+                                    }
+                                }
+                            }
+                        }else{
+                            stringQueSeUne=subconjuntosDeSimbolosCharacters.get(nombresDeCharacters.indexOf(stringIdents));
+                        }
+                        if(adding){
+                            for (int j=0; j<stringQueSeUne.length(); j++){
+                                if(!stringDeCharacter.contains(Character.toString(stringQueSeUne.charAt(j)))){
+                                    stringDeCharacter+=stringQueSeUne.charAt(j);
+                                }
+                            }
+                        }else{
+                            for (int j=0; j<stringQueSeUne.length(); j++){
+                                if(stringDeCharacter.contains(Character.toString(stringQueSeUne.charAt(j)))){
+                                    stringDeCharacter.replaceAll(Character.toString(stringQueSeUne.charAt(j)), "");
+                                }
+                            }
+                        }
+                        stringIdents="";
+                        findingIdent=false;
+                        findingQuotations=true;
+                    }else{
+                        stringIdents+=string.charAt(i);
+                    }
+                }else if (findingQuotations){
+                    if (string.charAt(i)=='\"'){
+                        if(adding){
+                            for (int j=0; j<stringQuotations.length(); j++){
+                                if(!stringDeCharacter.contains(Character.toString(stringQuotations.charAt(j)))){
+                                    stringDeCharacter+=stringQuotations.charAt(j);
+                                }
+                            }
+                        }else{
+                            for (int j=0; j<stringQuotations.length(); j++){
+                                if(stringDeCharacter.contains(Character.toString(stringQuotations.charAt(j)))){
+                                    stringDeCharacter.replaceAll(Character.toString(stringQuotations.charAt(j)), "");
+                                }
+                            }
+                        }
+                        stringQuotations="";
+                        findingQuotations=false;
+                    }else{
+                        stringQuotations+=string.charAt(i);
+                    }
+                }else if (findingCharNumber){
+                    if (string.charAt(i)==')'){
+                        if(numberGatheredFromFirstChar==-1){
+                            numberGatheredFromFirstChar=Integer.parseInt(stringCharNumber);
+                            justPassedChar=true;
+                            findingCharNumber=false;
+                            stringCharNumber="";
+                        }else{
+                            int valor1 = numberGatheredFromFirstChar;
+                            int valor2 = Integer.parseInt(stringCharNumber);
+                            String stringAgregar="";
+                            for (int j = valor1; j<=valor2;j++){
+                                stringAgregar = stringAgregar+ Character.toChars(j)[0];
+                            }
+                            if(adding){
+                                for (int j=0; j<stringAgregar.length(); j++){
+                                    if(!stringDeCharacter.contains(Character.toString(stringAgregar.charAt(j)))){
+                                        stringDeCharacter+=stringAgregar.charAt(j);
+                                    }
+                                }
+                            }else{
+                                for (int j=0; j<stringAgregar.length(); j++){
+                                    if(stringDeCharacter.contains(Character.toString(stringAgregar.charAt(j)))){
+                                        stringDeCharacter.replaceAll(Character.toString(stringAgregar.charAt(j)), "");
+                                    }
+                                }
+                            }
+                            findingCharNumber=false;
+                            stringCharNumber="";
+                            numberGatheredFromFirstChar=-1;
+                        }
+
+                    }else{
+                        stringCharNumber+=string.charAt(i);
+                    }
+                }else{
+                    if(string.charAt(i)=='-'){
+                        if(justPassedChar){                               
+                            char stringAgregar= Character.toChars(numberGatheredFromFirstChar)[0];
+                            if(adding){
+                                if(!stringDeCharacter.contains(Character.toString(stringAgregar))){
+                                    stringDeCharacter+=stringAgregar;
+                                }
+                                
+                            }else{
+                                if(stringDeCharacter.contains(Character.toString(stringAgregar))){
+                                    stringDeCharacter.replaceAll(Character.toString(stringAgregar), "");
+                                }
+                                
+                            }
+                            justPassedChar=false;
+                            numberGatheredFromFirstChar=-1;
+                            stringCharNumber="";
+                        }
+                        adding=false;
+                    }else if(string.charAt(i)=='+'){
+                        if(justPassedChar){                               
+                            char stringAgregar= Character.toChars(numberGatheredFromFirstChar)[0];
+                            if(adding){
+                                if(!stringDeCharacter.contains(Character.toString(stringAgregar))){
+                                    stringDeCharacter+=stringAgregar;
+                                }
+                                
+                            }else{
+                                if(stringDeCharacter.contains(Character.toString(stringAgregar))){
+                                    stringDeCharacter.replaceAll(Character.toString(stringAgregar), "");
+                                }
+                                
+                            }
+                            justPassedChar=false;
+                            numberGatheredFromFirstChar=-1;
+                            stringCharNumber="";
+                        }
+                        adding=true;
+                    }else if(string.charAt(i)=='('||string.charAt(i)==')'){
+                        
+                    }else if(string.charAt(i)=='.'){
+                        if(justPassedChar){
+                            justPassedChar=false;
+                            justPassedDotChar=true;
+                        }else if(justPassedDotChar){
+                            justPassedDotChar=false;
+                        }else{
+                            subconjuntosDeSimbolosCharacters.add(stringDeCharacter);
+                            symbols.add(stringDeCharacter);
+                            nombreDeCharacter="";
+                            beforeTheEqual=false;
+                            findingIdent=false;
+                            findingQuotations=false;
+                            findingCharNumber=false;
+                            adding=true;
+                            justPassedChar=false;
+                            justPassedDotChar=false;
+                            numberGatheredFromFirstChar=-1;
+                            stringDeCharacter="";
+                            break;
+                        }
+                    }else if(string.charAt(i)==' '){
+
+                    }else if(string.charAt(i)=='\"'){
+                        if(justPassedChar){                               
+                            char stringAgregar= Character.toChars(numberGatheredFromFirstChar)[0];
+                            if(adding){
+                                if(!stringDeCharacter.contains(Character.toString(stringAgregar))){
+                                    stringDeCharacter+=stringAgregar;
+                                }
+                                
+                            }else{
+                                if(stringDeCharacter.contains(Character.toString(stringAgregar))){
+                                    stringDeCharacter.replaceAll(Character.toString(stringAgregar), "");
+                                }
+                                
+                            }
+                            justPassedChar=false;
+                            numberGatheredFromFirstChar=-1;
+                            stringCharNumber="";
+                        }
+                        findingQuotations=true;
+                        stringQuotations="";
+                    }else{
+                        if(justPassedChar){                               
+                            char stringAgregar= Character.toChars(numberGatheredFromFirstChar)[0];
+                            if(adding){
+                                if(!stringDeCharacter.contains(Character.toString(stringAgregar))){
+                                    stringDeCharacter+=stringAgregar;
+                                }
+                                
+                            }else{
+                                if(stringDeCharacter.contains(Character.toString(stringAgregar))){
+                                    stringDeCharacter.replaceAll(Character.toString(stringAgregar), "");
+                                }
+                                
+                            }
+                            justPassedChar=false;
+                            numberGatheredFromFirstChar=-1;
+                            stringCharNumber="";
+                        }
+                        findingIdent=true;
+                        stringIdents+=string.charAt(i);
+                    }
+                }
+            }
+        }
+        if(justPassedDotChar){                               
+            char stringAgregar= Character.toChars(numberGatheredFromFirstChar)[0];
+            if(adding){
+                if(!stringDeCharacter.contains(Character.toString(stringAgregar))){
+                    stringDeCharacter+=stringAgregar;
+                }
+                
+            }else{
+                if(stringDeCharacter.contains(Character.toString(stringAgregar))){
+                    stringDeCharacter.replaceAll(Character.toString(stringAgregar), "");
+                }
+                
+            }
+            subconjuntosDeSimbolosCharacters.add(stringDeCharacter);
+            symbols.add(stringDeCharacter);
+            justPassedChar=false;
+            justPassedDotChar=false;
+            numberGatheredFromFirstChar=-1;
+            stringCharNumber="";
+        }
     }
 
     private void characterReader(String string){

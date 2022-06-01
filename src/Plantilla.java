@@ -101,5 +101,24 @@ public class Plantilla {
             return this.doble;
         }
     }
+    class StringRef {
+        private String string;
+
+        public StringRef() {
+            this.string = "";
+        }
+
+        public StringRef(String string) {
+            this.string = string;
+        }
+
+        public void assignValue(String string){
+            this.string = string;
+        }
+
+        public String getValue() {
+            return this.string;
+        }
+    }
 
 }

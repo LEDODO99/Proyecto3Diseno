@@ -13,13 +13,23 @@ public class TestingParser {
         System.out.println("Ingrese el nombre del archivo a leer");
         filename = sc.nextLine();
         BufferedReader reader = new BufferedReader(new FileReader(filename));
-        String line;
-        ScannerDouble scannerAritmetica = new ScannerDouble();
-        ParserDouble parserAritmetica;
-        ArrayList<Token> tokens = scannerAritmetica.GenerarTokenString(reader.readLine());
-        parserAritmetica = new ParserDouble(tokens);
-        parserAritmetica.Parse();
+        String lines="";
+        String line=reader.readLine();
+        lines+=line;
+        line=reader.readLine();
+        while (line!=null){
+            lines+="\n"+line;
+            line=reader.readLine();
+        }
+        
+        ScannerDouble scanner = new ScannerDouble();
+        ParserDouble parser;
+        System.out.println("Lines: "+lines);
+        ArrayList<Token> tokens = scanner.GenerarTokenString(lines);
+        parser = new ParserDouble(tokens);
+        parser.Parse();
         sc.close();
+        reader.close();
 
 
     }
